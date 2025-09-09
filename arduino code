@@ -1,0 +1,63 @@
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+#include <Wire.h>
+#include <math.h>
+
+Adafruit_MPU6050 mpu;
+
+unsigned long startTime = 0;
+const unsigned long duration = 50000; // 50 seconds
+
+// Calibration Offsets
+const float ax_correction = 0.5;
+const float ay_correction = 0;
+const float az_correction = 0;
+const float gx_correction = 0;
+const float gy_correction = -5;
+const float gz_correction = -5;
+// Use renamed constant to avoid macro conflict
+const float DEG_PER_RAD = 180.0 / M_PI;
+
+void setup(void) {
+  Serial.begin(9600);
+
+  if (!mpu.begin()) {
+    Serial.println("Failed to find MPU6050 chip");
+    while (1) delay(10);
+  }
+  Serial.println("MPU6050 Found!");
+
+  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+
+  delay(500);
+  startTime = millis();
+}
+
+void loop() {
+  if (millis() - startTime >= duration) {
+    Serial.println("✅ Data capture complete.");
+    while (1); // Stop the loop
+  }
+
+  sensors_event_t a, g, _temp;
+  mpu.getEvent(&a, &g, &_temp);
+
+  // Apply corrections
+  float correctedAX = a.acceleration.x - ax_correction;
+  float correctedAY = a.acceleration.y - ay_correction;
+  float correctedAZ = a.acceleration.z - az_correction;
+  float correctedGX = (g.gyro.x * DEG_PER_RAD) - gx_correction;
+  float correctedGY = (g.gyro.y * DEG_PER_RAD) - gy_correction;
+  float correctedGZ = (g.gyro.z * DEG_PER_RAD) - gz_correction;
+   //Print in CSV format
+  Serial.print(correctedAX); Serial.print(",");
+  Serial.print(correctedAY); Serial.print(",");
+  Serial.print(correctedAZ); Serial.print(",");
+  Serial.print(correctedGX); Serial.print(",");
+  Serial.print(correctedGY); Serial.print(",");
+  Serial.println(correctedGZ);
+
+  delay(100);  // 100 ms → 10 Hz
+}
